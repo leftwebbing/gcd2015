@@ -1,12 +1,11 @@
 ########run_analysis 
 ######## programming project 
 
-setwd("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015")
+setwd("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015") # my home working directory
 library(dplyr)
 library(tidyr)
 library(stringr)
 
-#
 #You should create one R script called run_analysis.R that does the following. 
 #
 #  1  Merges the training and the test sets to create one data set.
@@ -42,33 +41,27 @@ library(stringr)
 #
 # merge test & train into single data frame 
 #
-# compute mean for each column
+# compute average of each variable for each activity and each subject
+# mean for each column
 
-#read in firsst 10 lines, examine data structure
-# its all fixed-width 
-xTrain <- readLines("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/train/X_train.txt",50)
+# read test set, fixed-width as character, 2947 lines
+xTest <- readLines("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/test/X_test.txt",2947)
+#read training set, 7352 lines
+xTrain <- readLines("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/train/X_train.txt",7352)
 
-#read in firsst 10 lines, examine data structure
-# also fixed-width, 16 characters per column
-xTest <- readLines("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/test/X_test.txt",50)
-#?data.frame
 #nchar(xTrain[1] )/16 #[1] 561 columns, confirmed in features.txt
 
-
 ######## read in features from text file, find which variables to keep
-featuresTXT <- readLines("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/features.txt")
+featuresTXT <- readLines("UCI HAR Dataset/features.txt") # read file
 featuresTXT <- data.frame(featuresTXT ) # convert to data frame for separate()
-featuresTXT <- separate(featuresTXT, "featuresTXT", c("number", "name"), " ")
+featuresTXT <- separate(featuresTXT, "featuresTXT", c("number", "name"), " ") # separate into number, name columns
 featuresTXT$number <-NULL # delete first column for numbers
 featuresTXT <- featuresTXT$name  #convert back to vector
 
 keepCols <- grep("std|mean", featuresTXT , ignore.case = TRUE) # find column numbers containing std|mean
 keepNames <-str_extract(featuresTXT , ".*([s|S]td|[m|M]ean).*") # find variable names containing std|mean
-
-
-#xTrain <- read.fwf("C:/Users/YabbaMan/Documents/fun/coursera - cleaning data Apr 2015/UCI HAR Dataset/train/X_train.txt",
-#      widths = rep(16,561),col.names =featuresTXT  ) 
-
+keepNames <-keepNames[!is.na(keepNames)]
+#str(keepCols )
 
 xTrain <- data.frame(xTrain,stringsAsFactors = FALSE) #convert to data frame full of string
 xTest <- data.frame(xTest ,stringsAsFactors = FALSE) #convert to data frame full of string
@@ -76,7 +69,6 @@ xTest <- data.frame(xTest ,stringsAsFactors = FALSE) #convert to data frame full
 #str(xTrain )
 #str(xTest )
 #str(featuresTXT)
-#?separate
 #seeIfItWorks <-separate(xTrain[1], "xTrain", c("emptyFillerColumn", featuresTXT), "[ ]+")
 
 ######### separate by spaces AND add variable names ######### 
@@ -97,62 +89,85 @@ names(xTrain ) # confirm that only std|mean variables remain
 names(xTest )
 
 ######## read subject and activity files#######
-subjectColumnTrain<- readLines("UCI HAR Dataset/train/subject_train.txt",50) # read lines from subject file
-activityColumnTrain<- readLines("UCI HAR Dataset/train/y_train.txt",50)# read lines from activity label file
-subjectColumnTest<- readLines("UCI HAR Dataset/test/subject_test.txt",50) # read lines from subject file
-activityColumnTest<- readLines("UCI HAR Dataset/test/y_test.txt",50)# read lines from activity label file
+# test = 2947, train = 7352 from MSDOS command line 
+subjectColumnTrain<- readLines("UCI HAR Dataset/train/subject_train.txt",7352) # read lines from subject file
+activityColumnTrain<- readLines("UCI HAR Dataset/train/y_train.txt",7352)# read lines from activity label file
+subjectColumnTest<- readLines("UCI HAR Dataset/test/subject_test.txt",2947) # read lines from subject file
+activityColumnTest<- readLines("UCI HAR Dataset/test/y_test.txt",2947)# read lines from activity label file
 
 #str(subjectColumn)
 #seeIfItWorks<-cbind(seeIfItWorks,subjectColumn) # add subject  column to main data frame
 #seeIfItWorks<-cbind(seeIfItWorks,activityColumn)# add activity column to main data frame
 
-xTrain<-cbind(xTrain,subjectColumnTrain)# add subject column to train data frame
-xTrain<-cbind(xTrain,activityColumnTrain)# add activity column to train data frame
-xTest<-cbind(xTest,subjectColumnTest)# add subject column to train data frame
-xTest<-cbind(xTest,activityColumnTest)# add activity column to train data frame
+xTrain<-cbind(xTrain,subjectColumnTrain)  # add subject  column to train data frame
+xTrain<-cbind(xTrain,activityColumnTrain) # add activity column to train data frame
+xTest<-cbind(xTest,subjectColumnTest)     # add subject  column to test  data frame
+xTest<-cbind(xTest,activityColumnTest)    # add activity column to test  data frame
 
 names(xTest) # confirm only remaining std|mean variables + subject + activity
 
-#names(xTest) ==names(xTrain) # shows last 2 columns not same
-
 ######## set last columns to same name for both train and test ########
-names(xTrain)[87] <- "subjectColumn"
-names(xTrain)[88] <- "activityColumn"
-names(xTest)[87] <- "subjectColumn"
-names(xTest)[88] <- "activityColumn"
+names(xTrain)[87] <- "subject"
+names(xTrain)[88] <- "activity"
+names(xTest)[87] <- "subject"
+names(xTest)[88] <- "activity"
 
 xTotal <-rbind (xTrain,xTest) # combine both into one frame
 str(xTotal ) # check structure of combined frame
 
-################### complete down to here ###############
+######### step 5, compute averages "of each variable for each activity and each subject"
+# this description is ambiguous - does it mean calculating averages of every combination
+# of variable, activity and subject? That requires 86*6*30 = 15480 entries.
 
-#str( rbind (xTrain,xTest))  # bind together train & test frames
+tidyAverages <- matrix(nrow =86*6*30,ncol =4)# initialize vector
+colnames(tidyAverages ) <- c("variable name", "activity", "subject", "variable average") # set column names
 
-?read.table
-?readLines
-read.table(file, header = FALSE, sep = "", quote = "\"'",
-           dec = ".", numerals = c("allow.loss", "warn.loss", "no.loss"),
-           row.names, col.names, as.is = !stringsAsFactors,
-           na.strings = "NA", colClasses = NA, nrows = -1,
+count <-0 # initialize couter
+for (variableN in 1:86){ # run only first 5 activities in testing, then set back to 86 for real run TODO
+  for (activityN in 1:6){ # 6 activities
+    for (subjectN in 1:30) { # # run only first 5 subjects in testing, then set back to 30 for real run TODO
+      count <-count +1 #increment counter
 
-xTrainTwo <- read.table("UCI HAR Dataset/train/X_train.txt",nrows = 5,colClasses = "character",comment.char = "")
-#!watch out! read.table converts to numbers and loses precision
-#can get away without converting to numbers in initial stage, since most columsn will be deleted
-str( xTrainTwo )
-xTrainTwo <- xTrainTwo[,keepCols ]
-print(object.size(xTrainTwo ), units="Kb") #initially 231.5 Kb, then 36.8 Kb after subsetting
-# for 1000 lines, 8820.4 Kb, estimate whole file >>> 8820.4 *7.3 = 64388.92
+      tidyAverages[count ,1] <- keepNames[variableN ] # store var name into col 1
+      tidyAverages[count ,2] <- activityN # store activity # into col 2
+      tidyAverages[count ,3] <- subjectN # store subject # into col 3
+      ####### compute average of variable ####### 
+      # subset values matching variable, activity, subject
+      subVar <- xTotal[xTotal$subject ==subjectN  & xTotal$activity ==activityN  , variableN] # subset 
+      subVar <- as.numeric( subVar ) # convert to numeric FINALLY since only required here
+      if(length(subVar) == 0) tidyAverages[count ,4] <- NA # if empty, store NA
+        else tidyAverages[count ,4] <- mean(subVar ) # otherwise store average into col 4
+      
+      }
+    }
+  }
 
-xTrainTwo <- readLines("UCI HAR Dataset/train/X_train.txt",n = 10)
-xTrainTwo <- NULL
 
-1 WALKING
-2 WALKING_UPSTAIRS
-3 WALKING_DOWNSTAIRS
-4 SITTING
-5 STANDING
-6 LAYING
-count lines in: 
-test = 2947?  seems too low, maybe lower since test NOT train
-train = 7352
+#activityNames <- c("walking", "walkUp", "walkDown", "sit", "stand", "lay") # vector of names corresponding to levels 1:6
+#levels(xTotal$activity) <- activityNames # set levels of activity to names from prior line 
+#names(xTotal)[87] <- "subject"
+#names(xTotal)[88] <- "activity"
+#xTotal[,89] <-NULL
 
+# output tidy data frame will contain
+# rows: selected variables containing mean|std [1:86] 
+# columns: activity [1:6]  + subject [1:30] 
+
+######### write tidy data set #########
+write.table(xTotal,file = "tidyDataSet2.txt", row.name=FALSE)
+write.table(tidyAverages,file = "tidyAverages2.txt", row.name=FALSE)
+
+
+
+
+################### notes ###############
+
+#1 WALKING
+#2 WALKING_UPSTAIRS
+#3 WALKING_DOWNSTAIRS
+#4 SITTING
+#5 STANDING
+#6 LAYING
+#count lines in: 
+#test = 2947?  seems too low, maybe lower since test NOT train
+#train = 7352
